@@ -1,3 +1,3 @@
 # Alpine-Linux from scratch
 
-**Version 3.9.3**
+**Version 3.9.4**
