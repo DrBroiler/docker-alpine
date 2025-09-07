@@ -3,6 +3,8 @@ name: Build & Push (alpine edge + versions)
 on:
   push:
     branches: [ master ]
+    tags:
+      - '3.*'
   workflow_dispatch: {}
 
 concurrency:
