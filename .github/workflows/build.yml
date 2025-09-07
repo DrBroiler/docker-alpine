@@ -1,0 +1,98 @@
+name: Build & Push (alpine edge + versions)
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch: {}
+
+concurrency:
+  group: docker-alpine-${{ github.ref || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  edge:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker meta (edge)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/drbroiler/docker-alpine
+          tags: |
+            type=raw,value=edge
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=docker-alpine
+            org.opencontainers.image.version=edge
+
+      - name: Build & Push (edge)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          build-args: |
+            ALPINE_VERSION=edge
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  versions:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        alpine_version: [ "3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "3.16", "3.17", "3.18", "3.19", "3.20", "3.21", "3.22" ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker meta (${{ matrix.alpine_version }})
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/drbroiler/docker-alpine
+          tags: |
+            type=raw,value=${{ matrix.alpine_version }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=docker-alpine
+            org.opencontainers.image.version=${{ matrix.alpine_version }}
+
+      - name: Build & Push (${{ matrix.alpine_version }})
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            ALPINE_VERSION=${{ matrix.alpine_version }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
