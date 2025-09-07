@@ -1,5 +1,16 @@
-FROM scratch
-ADD alpine-minirootfs-3.10.2-x86_64.tar.gz /
-RUN sed -i 's/http:\/\/dl-cdn.alpinelinux.org\/alpine\/v3.10\/main/http:\/\/mirror1.hs-esslingen.de\/pub\/Mirrors\/alpine\/v3.10\/main/g' /etc/apk/repositories && \
-    sed -i 's/http:\/\/dl-cdn.alpinelinux.org\/alpine\/v3.10\/community/http:\/\/mirror1.hs-esslingen.de\/pub\/Mirrors\/alpine\/v3.10\/community/g' /etc/apk/repositories
-CMD ["/bin/sh"]
+ARG ALPINE_VERSION=3.11
+FROM alpine:${ALPINE_VERSION}
+ARG ALPINE_VERSION
+
+RUN set -eux; \
+    if [ "$ALPINE_VERSION" = "edge" ]; then \
+        echo "https://mirror1.hs-esslingen.de/pub/Mirrors/alpine/edge/main" > /etc/apk/repositories; \
+        echo "https://mirror1.hs-esslingen.de/pub/Mirrors/alpine/edge/community" >> /etc/apk/repositories; \
+    else \
+        echo "https://mirror1.hs-esslingen.de/pub/Mirrors/alpine/v${ALPINE_VERSION}/main" > /etc/apk/repositories; \
+        echo "https://mirror1.hs-esslingen.de/pub/Mirrors/alpine/v${ALPINE_VERSION}/community" >> /etc/apk/repositories; \
+    fi
+
+RUN apk add --no-cache ca-certificates
+
+CMD ["sh"]
